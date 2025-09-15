@@ -1,80 +1,44 @@
 /* eslint-disable */
 
-// read the code
 export class Game {
   private _lastSymbol = ' ';
-  private _toto: Board = new Board();
+  private _board: Board = new Board(); // _toto renamed to _board for clarity
 
   public Play(symbol: string, x: number, y: number): void {
-    //if first move
-    if (this._lastSymbol == ' ') {
-      //Problème : Commentaire incohérent avec le code ("if player is X" alors que vérification sur O)
-      //if player is X
-      if (symbol == 'O') {
-        throw new Error('Invalid first player');
-      }
+    // First move must be 'X'
+    if (this._lastSymbol === ' ' && symbol === 'O') {
+      throw new Error('Invalid first player');
     }
-    //if not first move but player repeated
-    else if (symbol == this._lastSymbol) {
+
+    // Check that the same player doesn't play twice in a row
+    if (symbol === this._lastSymbol) {
       throw new Error('Invalid next player');
     }
-    //if not first move but play on an already played tile
-    else if (this._toto.TileAt(x, y).Symbol != ' ') {
+
+    // Check that the tile is empty
+    if (this._board.TileAt(x, y).Symbol !== ' ') {
       throw new Error('Invalid position');
     }
 
-    // update game state
+    // Update game state
     this._lastSymbol = symbol;
-    this._toto.AddTileAt(symbol, x, y);
+    this._board.AddTileAt(symbol, x, y);
   }
 
-  //Problème : Ne vérifie que les lignes, pas les colonnes ni les diagonales
   public Winner(): string {
-    //if the positions in first row are taken
-    if (
-      this._toto.TileAt(0, 0)!.Symbol != ' ' &&
-      this._toto.TileAt(0, 1)!.Symbol != ' ' &&
-      this._toto.TileAt(0, 2)!.Symbol != ' '
-    ) {
-      //if first row is full with same symbol
-      if (
-        this._toto.TileAt(0, 0)!.Symbol == this._toto.TileAt(0, 1)!.Symbol &&
-        this._toto.TileAt(0, 2)!.Symbol == this._toto.TileAt(0, 1)!.Symbol
-      ) {
-        return this._toto.TileAt(0, 0)!.Symbol;
+    // Check all rows and columns
+    for (let i = 0; i < 3; i++) {
+      if (this._board.isRowWinner(i)) {
+        return this._board.TileAt(i, 0).Symbol;
+      }
+      if (this._board.isColumnWinner(i)) {
+        return this._board.TileAt(0, i).Symbol;
       }
     }
 
-    //if the positions in 2nd row are taken
-    if (
-      this._toto.TileAt(1, 0)!.Symbol != ' ' &&
-      this._toto.TileAt(1, 1)!.Symbol != ' ' &&
-      this._toto.TileAt(1, 2)!.Symbol != ' '
-    ) {
-      //if middle row is full with same symbol
-      if (
-        this._toto.TileAt(1, 0)!.Symbol == this._toto.TileAt(1, 1)!.Symbol &&
-        this._toto.TileAt(1, 2)!.Symbol == this._toto.TileAt(1, 1)!.Symbol
-      ) {
-        return this._toto.TileAt(1, 0)!.Symbol;
-      }
-    }
-
-    //Problème : Incohérences de commentaires ("2nd row" alors que c’est la 3ème ligne)
-    //if the positions in 2nd row are taken
-    if (
-      this._toto.TileAt(2, 0)!.Symbol != ' ' &&
-      this._toto.TileAt(2, 1)!.Symbol != ' ' &&
-      this._toto.TileAt(2, 2)!.Symbol != ' '
-    ) {
-      //Problème : Incohérences de commentaires ("middle row" alors que c’est la 3ème ligne)
-      //if middle row is full with same symbol
-      if (
-        this._toto.TileAt(2, 0)!.Symbol == this._toto.TileAt(2, 1)!.Symbol &&
-        this._toto.TileAt(2, 2)!.Symbol == this._toto.TileAt(2, 1)!.Symbol
-      ) {
-        return this._toto.TileAt(2, 0)!.Symbol;
-      }
+    // Check both diagonals
+    if (this._board.isDiagonalWinner()) {
+      return this._board.TileAt(1, 1).Symbol;
     }
 
     return ' ';
@@ -91,24 +55,57 @@ class Board {
   private _plays: Tile[] = [];
 
   constructor() {
+    // Initialize the board with empty tiles
     for (let i = 0; i < 3; i++) {
       for (let j = 0; j < 3; j++) {
-        const tile: Tile = { X: i, Y: j, Symbol: ' ' };
-        this._plays.push(tile);
+        this._plays.push({ X: i, Y: j, Symbol: ' ' });
       }
     }
   }
 
   public TileAt(x: number, y: number): Tile {
-    return this._plays.find((t: Tile) => t.X == x && t.Y == y)!;
+    return this._plays.find((t) => t.X === x && t.Y === y)!;
   }
 
-  //Problème : Code mort (tile jamais utilisé)
   public AddTileAt(symbol: string, x: number, y: number): void {
-    //@ts-ignore
-    const tile: Tile = { X: x, Y: y, Symbol: symbol };
+    // Update the symbol of the existing tile
+    this.TileAt(x, y).Symbol = symbol;
+  }
 
-    this._plays.find((t: Tile) => t.X == x && t.Y == y)!.Symbol = symbol;
+  // Check if a row has the same symbol
+  public isRowWinner(row: number): boolean {
+    const [a, b, c] = [
+      this.TileAt(row, 0),
+      this.TileAt(row, 1),
+      this.TileAt(row, 2),
+    ];
+    return a.Symbol !== ' ' && a.Symbol === b.Symbol && b.Symbol === c.Symbol;
+  }
+
+  // Check if a column has the same symbol
+  public isColumnWinner(col: number): boolean {
+    const [a, b, c] = [
+      this.TileAt(0, col),
+      this.TileAt(1, col),
+      this.TileAt(2, col),
+    ];
+    return a.Symbol !== ' ' && a.Symbol === b.Symbol && b.Symbol === c.Symbol;
+  }
+
+  // Check if a diagonal has the same symbol
+  public isDiagonalWinner(): boolean {
+    const center = this.TileAt(1, 1);
+    const mainDiag =
+        center.Symbol !== ' ' &&
+        center.Symbol === this.TileAt(0, 0).Symbol &&
+        center.Symbol === this.TileAt(2, 2).Symbol;
+
+    const antiDiag =
+        center.Symbol !== ' ' &&
+        center.Symbol === this.TileAt(0, 2).Symbol &&
+        center.Symbol === this.TileAt(2, 0).Symbol;
+
+    return mainDiag || antiDiag;
   }
 }
 // create a PR,
